@@ -1,0 +1,3 @@
+fastapi[standard]==0.115.2
+SpeechRecognition[whisper-local]==3.11.0
+yt-dlp==2024.10.7
