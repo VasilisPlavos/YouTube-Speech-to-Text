@@ -12,7 +12,8 @@ async def read_root(url: str, video_lang: Optional[str] = Query(None)):
     if (youtubeId != ""):
         response = RedirectResponse(url=f'/yt/{youtubeId}?video_lang={video_lang}')
         return response
-    return "Try something like http://localhost:3300/?url=https://www.youtube.com/watch?v=swXWUfufu2w?version=3&amp;hl=en_US&video_lang=en"
+    return "Try something like http://localhost:3300/?url=https://www.youtube.com/watch?v=swXWUfufu2w"
+    # return "Try something like http://localhost:3300/?url=https://www.youtube.com/watch?v=swXWUfufu2w?version=3&amp;hl=en_US&video_lang=en"
 
 @app.get("/yt/{id}")
 async def yt_id(id: str, background_tasks: BackgroundTasks, video_lang: Optional[str] = Query(None)):
