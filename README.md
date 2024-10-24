@@ -37,8 +37,10 @@ YouTube Speech to Text: Convert Youtube URLs to text using Speech Recognition wi
 
 Once the container is running you can use 2 http requests (as simple as that):
 
-1. `GET /?url=<youtube video url>`  (ex. http://localhost:3300/?url=https://www.youtube.com/watch?v=swXWUfufu2w)
-1. `GET /yt/<youtube video id>`     (ex. http://localhost:3300/yt/swXWUfufu2w)
+1. `GET /?url=<youtube video url>&video_lang={video_lang}`  (ex. http://localhost:3300/?url=https://www.youtube.com/watch?v=swXWUfufu2w&video_lang=en)
+1. `GET /yt/<youtube video id>?video_lang={video_lang}`     (ex. http://localhost:3300/yt/swXWUfufu2w?video_lang=en)
+
+* `video_lang` parameter is not mandatory. you can just leave it blank!
 
 Once the convertion will start you will get a response back. In order to get the text, you have to send a GET request again.
 

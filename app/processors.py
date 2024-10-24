@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from typing import Any
 import speech_recognition as sr
 import subprocess
 
@@ -23,7 +24,7 @@ def get_audio(folderPath, youtubeUrl):
     subprocess.run(f"{cmd}", shell=True)
     return audioFile
 
-def get_text(audioFile, language):
+def get_text(audioFile, language : Any | None = None):
     r = sr.Recognizer()
     with sr.AudioFile(audioFile) as source:
         data = r.record(source)
@@ -31,9 +32,8 @@ def get_text(audioFile, language):
         return text
 
 def get_video_lang(video_lang):
-    if (video_lang == None): return "en"
-    if (video_lang == 'None'): return "en"
-    if (video_lang == ''): return "en"
+    if (video_lang == 'None'): return None
+    if (video_lang == ''): return None
     return video_lang
 
 def get_youtube_id(url):
@@ -43,18 +43,18 @@ def get_youtube_id(url):
     except:
         return ""
 
-def run_process_in_background(channel, id, video_lang):
+def run_process_in_background(channel, id, video_lang : Any | None = None):
     folderPath = f"./{channel}/{id}/"
     fileName = "index.json"
     if (channel != "yt"):
         save_file(folderPath, fileName, json.dumps({ "id": id, "status": f'{channel} is not supported' }))
     
-    save_file(folderPath, fileName, json.dumps({ "id": id, "status": "generating audio file" }))
+    save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating audio file" }))
     youtubeUrl = f'https://youtu.be/{id}'
     audioFile = get_audio(folderPath, youtubeUrl)
-    save_file(folderPath, fileName, json.dumps({ "id": id, "status": "generating text" }))
+    save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating text" }))
     text = get_text(audioFile, video_lang)
-    save_file(folderPath, fileName, json.dumps({ "id": id, "status": "done", "text": text }))
+    save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "done", "text": text }))
     os.remove(audioFile)
 
 
