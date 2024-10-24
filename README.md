@@ -9,7 +9,7 @@
 YouTube Speech to Text: Convert Youtube URLs to text using Speech Recognition with Whisper AI (No API Required)
 
 <p align="center">
-  <a href="#video-example-here-%EF%B8%8F">
+  <a href="#video-example-here">
     <img alt="" src="https://github.com/VasilisPlavos/YouTube-Speech-to-Text/raw/refs/heads/main/assets/example.jpg" width="600" />
   </a>
 </p>
@@ -44,18 +44,15 @@ Once the container is running you can use 2 http requests (as simple as that):
 
 Once the convertion will start you will get a response back. In order to get the text, you have to send a GET request again.
 
-## VIDEO EXAMPLE HERE 📽️
+## VIDEO EXAMPLE HERE
 
 <p align="center">
-  <a href="#">
-    <img alt="" src="https://github.com/VasilisPlavos/YouTube-Speech-to-Text/raw/refs/heads/main/assets/example.mp4" width="600" />
+  <a href="https://github.com/VasilisPlavos/YouTube-Speech-to-Text/raw/refs/heads/main/assets/example.mp4">
+    <img alt="" src="https://github.com/VasilisPlavos/YouTube-Speech-to-Text/raw/refs/heads/main/assets/example.jpg" width="600" />
   </a>
 </p>
 
-<video width="640" height="480" controls>
-  <source src="https://github.com/VasilisPlavos/YouTube-Speech-to-Text/raw/refs/heads/main/assets/example.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+👉 Link to video: https://github.com/VasilisPlavos/YouTube-Speech-to-Text/raw/refs/heads/main/assets/example.mp4
 
 ## Files structure
 
