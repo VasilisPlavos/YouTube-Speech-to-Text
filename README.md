@@ -19,7 +19,7 @@ YouTube Speech to Text: Convert Youtube URLs to text using Speech Recognition wi
 1. Open a console to the folder that includes the **Dockerfile** and run the commands
     ```shell
     docker build -t youtube-to-text:latest . # be patient. it takes time to download the models
-    docker run -d --name youtube-to-text -p 3300:80 youtube-to-text:latest # ready
+    docker run -d --name youtube-to-text -p 3533:80 youtube-to-text:latest # ready
     # go to http://localhost:3300/yt/swXWUfufu2w to try it! :)
     ```
 
