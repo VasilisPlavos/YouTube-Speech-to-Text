@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+import shutil as _shutil
 
 import watcher
 
@@ -37,6 +38,60 @@ class TestFindStableFiles(unittest.TestCase):
             ready, sizes = watcher.find_stable_files(d, {})
             self.assertEqual(ready, [])
             self.assertEqual(sizes, {})
+
+
+class ProcessFileBase(unittest.TestCase):
+    def setUp(self):
+        self.base = tempfile.mkdtemp()
+        for sub in ("in", "out", "error", watcher.WORK_SUBDIR):
+            os.makedirs(os.path.join(self.base, sub))
+        self.in_file = os.path.join(self.base, "in", "song.mp3")
+        _write(self.in_file, b"audio-bytes")
+        self._orig = watcher.transcribe_local_file
+
+    def tearDown(self):
+        watcher.transcribe_local_file = self._orig
+        _shutil.rmtree(self.base, ignore_errors=True)
+
+
+class TestProcessFileSuccess(ProcessFileBase):
+    def test_moves_original_and_writes_md_and_cleans_work(self):
+        watcher.transcribe_local_file = lambda p, w, language=None: "γεια"
+        watcher.process_file(self.base, self.in_file, None, 1)
+
+        out = os.path.join(self.base, "out")
+        self.assertTrue(os.path.exists(os.path.join(out, "song.mp3")))
+        with open(os.path.join(out, "song.md"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "---\nchannel: local folder\nid: song\n---\nγεια\n")
+        self.assertFalse(os.path.exists(self.in_file))
+        self.assertEqual(os.listdir(os.path.join(self.base, watcher.WORK_SUBDIR)), [])
+
+
+class TestProcessFileError(ProcessFileBase):
+    def test_moves_original_to_error_with_log_and_cleans_work(self):
+        def boom(p, w, language=None):
+            raise RuntimeError("ffmpeg exploded")
+
+        watcher.transcribe_local_file = boom
+        watcher.process_file(self.base, self.in_file, None, 1)
+
+        err = os.path.join(self.base, "error")
+        self.assertTrue(os.path.exists(os.path.join(err, "song.mp3")))
+        with open(os.path.join(err, "song.error.log"), encoding="utf-8") as f:
+            self.assertIn("ffmpeg exploded", f.read())
+        self.assertFalse(os.path.exists(self.in_file))
+        self.assertEqual(os.listdir(os.path.join(self.base, watcher.WORK_SUBDIR)), [])
+
+
+class TestProcessFileCollision(ProcessFileBase):
+    def test_suffixes_when_output_exists(self):
+        open(os.path.join(self.base, "out", "song.md"), "w").close()
+        watcher.transcribe_local_file = lambda p, w, language=None: "hi"
+        watcher.process_file(self.base, self.in_file, None, 1)
+
+        out = os.path.join(self.base, "out")
+        self.assertTrue(os.path.exists(os.path.join(out, "song-1.mp3")))
+        self.assertTrue(os.path.exists(os.path.join(out, "song-1.md")))
 
 
 if __name__ == "__main__":
