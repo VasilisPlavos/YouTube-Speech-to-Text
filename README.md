@@ -69,7 +69,7 @@ Environment variables (all optional):
 | Variable | Default | Description |
 |---|---|---|
 | `WATCH_DIR` | `/data` | Root of the watch folder (must match the `-v` mount point) |
-| `POLL_INTERVAL` | `10` | Seconds between directory scans |
+| `POLL_INTERVAL` | `5` | Seconds between directory scans |
 | `DEFAULT_LANG` | _(auto)_ | Language hint passed to Whisper (e.g. `en`, `el`) |
 
 ## Files structure
