@@ -49,6 +49,7 @@ def process_file(base_dir, input_path, language, counter):
         final_base = free_base(err_dir, stem, [ext, ".error.log"])
         with open(os.path.join(err_dir, final_base + ".error.log"), "w", encoding="utf-8") as f:
             f.write(traceback.format_exc())
-        shutil.move(input_path, os.path.join(err_dir, final_base + ext))
+        if os.path.exists(input_path):
+            shutil.move(input_path, os.path.join(err_dir, final_base + ext))
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
