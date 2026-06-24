@@ -1,10 +1,20 @@
+from contextlib import asynccontextmanager
 from typing import Optional
 from fastapi import BackgroundTasks, FastAPI, Query
 from fastapi.responses import RedirectResponse
 from processors import *
+from watcher import start_watcher
 
 # cmd: fastapi dev
-app = FastAPI()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_watcher()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 @app.get('/')
 async def read_root(url: str, video_lang: Optional[str] = Query(None)):

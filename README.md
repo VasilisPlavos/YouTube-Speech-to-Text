@@ -52,6 +52,26 @@ Once the convertion will start you will get a response back. In order to get the
 
 👉 Link to video: https://github.com/VasilisPlavos/YouTube-Speech-to-Text/raw/refs/heads/main/assets/example.mp4
 
+## Local watch-folder
+
+The container also watches a local folder for audio/video files and transcribes them automatically.
+
+1. Mount one host directory at `/data` when starting the container:
+    ```shell
+    docker run -d --name youtube-to-text -p 3300:80 -v /host/media:/data youtube-to-text:latest
+    ```
+2. Drop any supported audio or video file into `/host/media/in/`.
+3. Once transcription completes the original file and a `.md` transcript are moved to `/host/media/out/`.
+4. If transcription fails the original file is moved to `/host/media/error/` along with a `.error.log`.
+
+Environment variables (all optional):
+
+| Variable | Default | Description |
+|---|---|---|
+| `WATCH_DIR` | `/data` | Root of the watch folder (must match the `-v` mount point) |
+| `POLL_INTERVAL` | `10` | Seconds between directory scans |
+| `DEFAULT_LANG` | _(auto)_ | Language hint passed to Whisper (e.g. `en`, `el`) |
+
 ## Files structure
 
     .

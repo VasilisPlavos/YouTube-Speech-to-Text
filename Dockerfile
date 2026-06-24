@@ -23,5 +23,7 @@ pip install --no-cache-dir SpeechRecognition[whisper-local] yt-dlp fastapi[stand
 CMD ["fastapi", "run", "main.py", "--port", "80"]
 
 # docker build -t youtube-to-text:latest .
-# docker run -d --name youtube-to-text -p 3300:80 youtube-to-text:latest
-# go to http://localhost:3300/yt/swXWUfufu2w
+# docker run -d --name youtube-to-text -p 3300:80 -v /host/media:/data youtube-to-text:latest
+# Drop audio/video files into /host/media/in ; transcripts appear in /host/media/out
+# Optional env: -e POLL_INTERVAL=5 -e DEFAULT_LANG=en -e WATCH_DIR=/data
+# YouTube endpoint still available at http://localhost:3300/yt/swXWUfufu2w

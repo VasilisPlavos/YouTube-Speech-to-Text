@@ -144,5 +144,27 @@ class TestStartWatcher(unittest.TestCase):
             watcher.run_watch_loop = orig
 
 
+import asyncio
+
+
+class TestMainLifespanStartsWatcher(unittest.TestCase):
+    def test_lifespan_calls_start_watcher(self):
+        import main
+
+        called = []
+        orig = main.start_watcher
+        main.start_watcher = lambda: called.append(True)
+
+        async def run():
+            async with main.lifespan(main.app):
+                pass
+
+        try:
+            asyncio.run(run())
+        finally:
+            main.start_watcher = orig
+        self.assertEqual(called, [True])
+
+
 if __name__ == "__main__":
     unittest.main()
