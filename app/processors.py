@@ -5,6 +5,28 @@ from typing import Any
 import speech_recognition as sr
 import subprocess
 
+AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".opus", ".wma"}
+VIDEO_EXTS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv"}
+SUPPORTED_EXTS = AUDIO_EXTS | VIDEO_EXTS
+
+
+def is_supported_media(filename):
+    return os.path.splitext(filename)[1].lower() in SUPPORTED_EXTS
+
+
+def build_markdown(stem, text):
+    return f"---\nchannel: local folder\nid: {stem}\n---\n{text}\n"
+
+
+def free_base(target_dir, base, companion_exts):
+    candidate = base
+    n = 0
+    while any(os.path.exists(os.path.join(target_dir, candidate + e)) for e in companion_exts):
+        n += 1
+        candidate = f"{base}-{n}"
+    return candidate
+
+
 def check_status(channel, id):
     folderPath = f"./{channel}/{id}/"
     fileName = "index.json"
