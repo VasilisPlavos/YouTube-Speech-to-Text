@@ -53,3 +53,43 @@ def process_file(base_dir, input_path, language, counter):
             shutil.move(input_path, os.path.join(err_dir, final_base + ext))
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
+
+
+def ensure_dirs(base_dir):
+    for sub in ("in", "out", "error", WORK_SUBDIR):
+        os.makedirs(os.path.join(base_dir, sub), exist_ok=True)
+
+
+def clean_work_dir(base_dir):
+    work_root = os.path.join(base_dir, WORK_SUBDIR)
+    shutil.rmtree(work_root, ignore_errors=True)
+    os.makedirs(work_root, exist_ok=True)
+
+
+def run_once(base_dir, sizes, counter, language):
+    in_dir = os.path.join(base_dir, "in")
+    ready, sizes = find_stable_files(in_dir, sizes)
+    for path in ready:
+        counter += 1
+        process_file(base_dir, path, language, counter)
+    return sizes, counter
+
+
+def run_watch_loop(base_dir, poll_interval, language):
+    ensure_dirs(base_dir)
+    clean_work_dir(base_dir)
+    sizes = {}
+    counter = 0
+    while True:
+        sizes, counter = run_once(base_dir, sizes, counter, language)
+        time.sleep(poll_interval)
+
+
+def start_watcher():
+    t = threading.Thread(
+        target=run_watch_loop,
+        args=(WATCH_DIR, POLL_INTERVAL, DEFAULT_LANG),
+        daemon=True,
+    )
+    t.start()
+    return t

@@ -94,5 +94,55 @@ class TestProcessFileCollision(ProcessFileBase):
         self.assertTrue(os.path.exists(os.path.join(out, "song-1.md")))
 
 
+class TestEnsureAndCleanDirs(unittest.TestCase):
+    def test_ensure_dirs_creates_all(self):
+        with tempfile.TemporaryDirectory() as d:
+            watcher.ensure_dirs(d)
+            for sub in ("in", "out", "error", watcher.WORK_SUBDIR):
+                self.assertTrue(os.path.isdir(os.path.join(d, sub)), sub)
+
+    def test_clean_work_dir_empties_but_recreates(self):
+        with tempfile.TemporaryDirectory() as d:
+            work = os.path.join(d, watcher.WORK_SUBDIR)
+            os.makedirs(os.path.join(work, "orphan-1"))
+            watcher.clean_work_dir(d)
+            self.assertTrue(os.path.isdir(work))
+            self.assertEqual(os.listdir(work), [])
+
+
+class TestRunOnce(ProcessFileBase):
+    def test_processes_only_stable_files(self):
+        watcher.transcribe_local_file = lambda p, w, language=None: "hi"
+        in_dir = os.path.join(self.base, "in")
+        # First pass: file seen but not yet stable -> nothing processed.
+        sizes, counter = watcher.run_once(self.base, {}, 0, None)
+        self.assertTrue(os.path.exists(self.in_file))
+        self.assertEqual(counter, 0)
+        # Second pass: stable -> processed and moved out.
+        sizes, counter = watcher.run_once(self.base, sizes, counter, None)
+        self.assertFalse(os.path.exists(self.in_file))
+        self.assertEqual(counter, 1)
+        self.assertTrue(os.path.exists(os.path.join(self.base, "out", "song.md")))
+
+
+class TestStartWatcher(unittest.TestCase):
+    def test_starts_daemon_thread_with_config(self):
+        recorded = {}
+        orig = watcher.run_watch_loop
+
+        def fake_loop(base, interval, lang):
+            recorded["args"] = (base, interval, lang)
+
+        watcher.run_watch_loop = fake_loop
+        try:
+            t = watcher.start_watcher()
+            t.join(timeout=2)
+            self.assertTrue(t.daemon)
+            self.assertEqual(recorded["args"][0], watcher.WATCH_DIR)
+            self.assertEqual(recorded["args"][1], watcher.POLL_INTERVAL)
+        finally:
+            watcher.run_watch_loop = orig
+
+
 if __name__ == "__main__":
     unittest.main()
