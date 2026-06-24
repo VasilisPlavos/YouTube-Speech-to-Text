@@ -92,3 +92,15 @@ def save_file_by_channel(channel, id, jsonFile):
     folderPath = f"./{channel}/{id}/"
     fileName = "index.json"
     save_file(folderPath, fileName, jsonFile)
+
+
+def extract_audio_to_wav(input_path, workdir):
+    wav_path = os.path.join(workdir, "audio.wav")
+    cmd = ["ffmpeg", "-y", "-i", input_path, "-ar", "16000", "-ac", "1", wav_path]
+    subprocess.run(cmd, check=True)
+    return wav_path
+
+
+def transcribe_local_file(input_path, workdir, language=None):
+    wav_path = extract_audio_to_wav(input_path, workdir)
+    return get_text(wav_path, language)

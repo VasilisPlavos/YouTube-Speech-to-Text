@@ -1,6 +1,7 @@
 import unittest
 import os
 import tempfile
+import processors
 from processors import get_youtube_id, is_supported_media, build_markdown, free_base
 
 class TestGetYoutubeId(unittest.TestCase):
@@ -72,6 +73,55 @@ class TestFreeBase(unittest.TestCase):
             open(os.path.join(d, "song.md"), "w").close()
             open(os.path.join(d, "song-1.mp3"), "w").close()
             self.assertEqual(free_base(d, "song", [".mp3", ".md"]), "song-2")
+
+
+class TestExtractAudioToWav(unittest.TestCase):
+    def test_builds_ffmpeg_command_and_returns_wav_path(self):
+        captured = {}
+
+        def fake_run(cmd, **kwargs):
+            captured["cmd"] = cmd
+            captured["kwargs"] = kwargs
+
+        original = processors.subprocess.run
+        processors.subprocess.run = fake_run
+        try:
+            with tempfile.TemporaryDirectory() as work:
+                wav = processors.extract_audio_to_wav("/in/clip.mp4", work)
+                self.assertEqual(wav, os.path.join(work, "audio.wav"))
+                self.assertEqual(captured["cmd"][0], "ffmpeg")
+                self.assertIn("/in/clip.mp4", captured["cmd"])
+                self.assertIn("16000", captured["cmd"])
+                self.assertIn(wav, captured["cmd"])
+                self.assertTrue(captured["kwargs"].get("check"))
+        finally:
+            processors.subprocess.run = original
+
+
+class TestTranscribeLocalFile(unittest.TestCase):
+    def test_extracts_then_transcribes(self):
+        calls = {}
+
+        def fake_extract(input_path, workdir):
+            calls["extract"] = (input_path, workdir)
+            return os.path.join(workdir, "audio.wav")
+
+        def fake_get_text(audioFile, language=None):
+            calls["get_text"] = (audioFile, language)
+            return "hello world"
+
+        orig_extract = processors.extract_audio_to_wav
+        orig_get_text = processors.get_text
+        processors.extract_audio_to_wav = fake_extract
+        processors.get_text = fake_get_text
+        try:
+            text = processors.transcribe_local_file("/in/clip.mp4", "/work", "en")
+            self.assertEqual(text, "hello world")
+            self.assertEqual(calls["extract"], ("/in/clip.mp4", "/work"))
+            self.assertEqual(calls["get_text"], ("/work/audio.wav", "en"))
+        finally:
+            processors.extract_audio_to_wav = orig_extract
+            processors.get_text = orig_get_text
 
 
 if __name__ == '__main__':
