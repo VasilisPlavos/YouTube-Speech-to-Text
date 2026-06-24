@@ -43,7 +43,12 @@ def check_status(channel, id):
 def get_audio(folderPath, youtubeUrl):
     audioFile = f"{folderPath}audio.wav"
     cmd = f"yt-dlp --extract-audio --audio-format wav -o {audioFile} {youtubeUrl}"
-    subprocess.run(f"{cmd}", shell=True)
+    result = subprocess.run(f"{cmd}", shell=True)
+    if result.returncode != 0 or not os.path.exists(audioFile):
+        raise RuntimeError(
+            f"yt-dlp failed for {youtubeUrl} (exit code {result.returncode}); "
+            f"no audio produced at {audioFile}. See container logs for yt-dlp output."
+        )
     return audioFile
 
 def get_text(audioFile, language : Any | None = None):
@@ -70,14 +75,18 @@ def run_process_in_background(channel, id, video_lang : Any | None = None):
     fileName = "index.json"
     if (channel != "yt"):
         save_file(folderPath, fileName, json.dumps({ "id": id, "status": f'{channel} is not supported' }))
-    
-    save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating audio file" }))
-    youtubeUrl = f'https://youtu.be/{id}'
-    audioFile = get_audio(folderPath, youtubeUrl)
-    save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating text" }))
-    text = get_text(audioFile, video_lang)
-    save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "done", "text": text }))
-    os.remove(audioFile)
+
+    try:
+        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating audio file" }))
+        youtubeUrl = f'https://youtu.be/{id}'
+        audioFile = get_audio(folderPath, youtubeUrl)
+        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating text" }))
+        text = get_text(audioFile, video_lang)
+        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "done", "text": text }))
+        os.remove(audioFile)
+    except Exception as e:
+        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "error", "error": str(e) }))
+        raise
 
 
 def save_file(folderPath, fileName, jsonFile):
