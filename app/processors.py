@@ -5,6 +5,28 @@ from typing import Any
 import speech_recognition as sr
 import subprocess
 
+AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".opus", ".wma"}
+VIDEO_EXTS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv"}
+SUPPORTED_EXTS = AUDIO_EXTS | VIDEO_EXTS
+
+
+def is_supported_media(filename):
+    return os.path.splitext(filename)[1].lower() in SUPPORTED_EXTS
+
+
+def build_markdown(stem, text):
+    return f"---\nchannel: local folder\nid: {stem}\n---\n{text}\n"
+
+
+def free_base(target_dir, base, companion_exts):
+    candidate = base
+    n = 0
+    while any(os.path.exists(os.path.join(target_dir, candidate + e)) for e in companion_exts):
+        n += 1
+        candidate = f"{base}-{n}"
+    return candidate
+
+
 def check_status(channel, id):
     folderPath = f"./{channel}/{id}/"
     fileName = "index.json"
@@ -21,7 +43,12 @@ def check_status(channel, id):
 def get_audio(folderPath, youtubeUrl):
     audioFile = f"{folderPath}audio.wav"
     cmd = f"yt-dlp --extract-audio --audio-format wav -o {audioFile} {youtubeUrl}"
-    subprocess.run(f"{cmd}", shell=True)
+    result = subprocess.run(f"{cmd}", shell=True)
+    if result.returncode != 0 or not os.path.exists(audioFile):
+        raise RuntimeError(
+            f"yt-dlp failed for {youtubeUrl} (exit code {result.returncode}); "
+            f"no audio produced at {audioFile}. See container logs for yt-dlp output."
+        )
     return audioFile
 
 def get_text(audioFile, language : Any | None = None):
@@ -48,14 +75,18 @@ def run_process_in_background(channel, id, video_lang : Any | None = None):
     fileName = "index.json"
     if (channel != "yt"):
         save_file(folderPath, fileName, json.dumps({ "id": id, "status": f'{channel} is not supported' }))
-    
-    save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating audio file" }))
-    youtubeUrl = f'https://youtu.be/{id}'
-    audioFile = get_audio(folderPath, youtubeUrl)
-    save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating text" }))
-    text = get_text(audioFile, video_lang)
-    save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "done", "text": text }))
-    os.remove(audioFile)
+
+    try:
+        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating audio file" }))
+        youtubeUrl = f'https://youtu.be/{id}'
+        audioFile = get_audio(folderPath, youtubeUrl)
+        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating text" }))
+        text = get_text(audioFile, video_lang)
+        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "done", "text": text }))
+        os.remove(audioFile)
+    except Exception as e:
+        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "error", "error": str(e) }))
+        raise
 
 
 def save_file(folderPath, fileName, jsonFile):
@@ -70,3 +101,15 @@ def save_file_by_channel(channel, id, jsonFile):
     folderPath = f"./{channel}/{id}/"
     fileName = "index.json"
     save_file(folderPath, fileName, jsonFile)
+
+
+def extract_audio_to_wav(input_path, workdir):
+    wav_path = os.path.join(workdir, "audio.wav")
+    cmd = ["ffmpeg", "-y", "-i", input_path, "-ar", "16000", "-ac", "1", wav_path]
+    subprocess.run(cmd, check=True)
+    return wav_path
+
+
+def transcribe_local_file(input_path, workdir, language=None):
+    wav_path = extract_audio_to_wav(input_path, workdir)
+    return get_text(wav_path, language)

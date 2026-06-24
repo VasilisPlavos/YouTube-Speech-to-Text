@@ -52,14 +52,43 @@ Once the convertion will start you will get a response back. In order to get the
 
 👉 Link to video: https://github.com/VasilisPlavos/YouTube-Speech-to-Text/raw/refs/heads/main/assets/example.mp4
 
+## Local watch-folder
+
+The container also watches a local folder for audio/video files and transcribes them automatically.
+
+1. Start the container with one host directory mounted at `/data`.
+
+    The simplest way is Docker Compose (set the host path via `MEDIA_DIR`, or edit it in `docker-compose.yml`):
+    ```shell
+    docker compose up -d --build
+    ```
+    Or run it manually:
+    ```shell
+    docker run -d --name youtube-to-text -p 3300:80 -v /host/media:/data youtube-to-text:latest
+    ```
+2. Drop any supported audio or video file into `/host/media/in/`.
+3. Once transcription completes the original file and a `.md` transcript are moved to `/host/media/out/`.
+4. If transcription fails the original file is moved to `/host/media/error/` along with a `.error.log`.
+
+Environment variables (all optional):
+
+| Variable | Default | Description |
+|---|---|---|
+| `WATCH_DIR` | `/data` | Root of the watch folder (must match the `-v` mount point) |
+| `POLL_INTERVAL` | `5` | Seconds between directory scans |
+| `DEFAULT_LANG` | _(auto)_ | Language hint passed to Whisper (e.g. `en`, `el`) |
+
 ## Files structure
 
     .
     ├── Dockerfile
+    ├── docker-compose.yml
     ├── app
     ├──── main.py
     ├──── processors.py
+    ├──── watcher.py
     ├──── test_processors.py
+    ├──── test_watcher.py
     ├──── requirements.txt*
     ├──── requirements.long.txt*
 
