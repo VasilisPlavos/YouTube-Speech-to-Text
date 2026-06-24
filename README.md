@@ -56,7 +56,13 @@ Once the convertion will start you will get a response back. In order to get the
 
 The container also watches a local folder for audio/video files and transcribes them automatically.
 
-1. Mount one host directory at `/data` when starting the container:
+1. Start the container with one host directory mounted at `/data`.
+
+    The simplest way is Docker Compose (set the host path via `MEDIA_DIR`, or edit it in `docker-compose.yml`):
+    ```shell
+    docker compose up -d --build
+    ```
+    Or run it manually:
     ```shell
     docker run -d --name youtube-to-text -p 3300:80 -v /host/media:/data youtube-to-text:latest
     ```
@@ -76,10 +82,13 @@ Environment variables (all optional):
 
     .
     ├── Dockerfile
+    ├── docker-compose.yml
     ├── app
     ├──── main.py
     ├──── processors.py
+    ├──── watcher.py
     ├──── test_processors.py
+    ├──── test_watcher.py
     ├──── requirements.txt*
     ├──── requirements.long.txt*
 
