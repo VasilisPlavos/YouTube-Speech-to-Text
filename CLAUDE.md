@@ -50,3 +50,17 @@ The core design is an **async poll-and-persist pattern** — there is no databas
 
 - `processors.py` holds all logic and I/O; `main.py` is only routing. `test_processors.py` currently covers `get_youtube_id` only.
 - `requirements.txt` (pinned top-level deps) and `requirements.long.txt` (full frozen tree) are kept as backups — the Dockerfile does **not** use them; it `pip install`s the packages directly. Keep these in sync if you change dependencies.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live as GitHub issues in `VasilisPlavos/YouTube-Speech-to-Text`, managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical roles — `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root (created lazily when terms or decisions get resolved). See `docs/agents/domain.md`.
