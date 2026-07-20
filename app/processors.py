@@ -9,6 +9,8 @@ AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".opus", ".wma"}
 VIDEO_EXTS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv"}
 SUPPORTED_EXTS = AUDIO_EXTS | VIDEO_EXTS
 
+INDEX_FILE = "index.json"
+
 
 def is_supported_media(filename):
     return os.path.splitext(filename)[1].lower() in SUPPORTED_EXTS
@@ -27,80 +29,87 @@ def free_base(target_dir, base, companion_exts):
     return candidate
 
 
+def job_dir(channel, id):
+    return f"./{channel}/{id}/"
+
+
+def write_status(channel, id, **fields):
+    payload = {"channel": channel, "id": id, **fields}
+    save_file(job_dir(channel, id), INDEX_FILE, json.dumps(payload))
+
+
 def check_status(channel, id):
-    folderPath = f"./{channel}/{id}/"
-    fileName = "index.json"
-    filePath = os.path.join(folderPath, fileName)
-    file_context = ''
-    if os.path.exists(filePath):
-        with open(filePath) as json_data:
-            file_context = json.load(json_data)
-    else:
-        file_context = { "channel": channel, "id": id, "status": "start" }
-        save_file(folderPath, fileName, json.dumps(file_context))
+    folder_path = job_dir(channel, id)
+    file_path = os.path.join(folder_path, INDEX_FILE)
+    if os.path.exists(file_path):
+        with open(file_path) as json_data:
+            return json.load(json_data)
+    file_context = {"channel": channel, "id": id, "status": "start"}
+    save_file(folder_path, INDEX_FILE, json.dumps(file_context))
     return file_context
 
-def get_audio(folderPath, youtubeUrl):
-    audioFile = f"{folderPath}audio.wav"
-    cmd = f"yt-dlp --extract-audio --audio-format wav -o {audioFile} {youtubeUrl}"
-    result = subprocess.run(f"{cmd}", shell=True)
-    if result.returncode != 0 or not os.path.exists(audioFile):
-        raise RuntimeError(
-            f"yt-dlp failed for {youtubeUrl} (exit code {result.returncode}); "
-            f"no audio produced at {audioFile}. See container logs for yt-dlp output."
-        )
-    return audioFile
 
-def get_text(audioFile, language : Any | None = None):
+def get_audio(folder_path, youtube_url):
+    audio_file = f"{folder_path}audio.wav"
+    cmd = ["yt-dlp", "--extract-audio", "--audio-format", "wav", "-o", audio_file, youtube_url]
+    result = subprocess.run(cmd)
+    if result.returncode != 0 or not os.path.exists(audio_file):
+        raise RuntimeError(
+            f"yt-dlp failed for {youtube_url} (exit code {result.returncode}); "
+            f"no audio produced at {audio_file}. See container logs for yt-dlp output."
+        )
+    return audio_file
+
+
+def get_text(audio_file, language: Any | None = None):
     r = sr.Recognizer()
-    with sr.AudioFile(audioFile) as source:
+    with sr.AudioFile(audio_file) as source:
         data = r.record(source)
-        text = r.recognize_whisper(audio_data=data, language=language)
-        return text
+        return r.recognize_whisper(audio_data=data, language=language)
+
 
 def get_video_lang(video_lang):
-    if (video_lang == 'None'): return None
-    if (video_lang == ''): return None
+    if video_lang in ('None', ''):
+        return None
     return video_lang
 
+
 def get_youtube_id(url):
-    try:
-        match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", url)
-        return match.group(1) if match else ""
-    except:
+    if not isinstance(url, str):
         return ""
+    match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", url)
+    return match.group(1) if match else ""
 
-def run_process_in_background(channel, id, video_lang : Any | None = None):
-    folderPath = f"./{channel}/{id}/"
-    fileName = "index.json"
-    if (channel != "yt"):
-        save_file(folderPath, fileName, json.dumps({ "id": id, "status": f'{channel} is not supported' }))
 
+def run_process_in_background(channel, id, video_lang: Any | None = None):
+    if channel != "yt":
+        write_status(channel, id, status=f"{channel} is not supported")
+        return
+
+    folder_path = job_dir(channel, id)
     try:
-        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating audio file" }))
-        youtubeUrl = f'https://youtu.be/{id}'
-        audioFile = get_audio(folderPath, youtubeUrl)
-        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "generating text" }))
-        text = get_text(audioFile, video_lang)
-        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "done", "text": text }))
-        os.remove(audioFile)
+        write_status(channel, id, status="generating audio file")
+        youtube_url = f'https://youtu.be/{id}'
+        audio_file = get_audio(folder_path, youtube_url)
+        write_status(channel, id, status="generating text")
+        text = get_text(audio_file, video_lang)
+        write_status(channel, id, status="done", text=text)
+        os.remove(audio_file)
     except Exception as e:
-        save_file(folderPath, fileName, json.dumps({ "channel": channel, "id": id, "status": "error", "error": str(e) }))
+        write_status(channel, id, status="error", error=str(e))
         raise
 
 
-def save_file(folderPath, fileName, jsonFile):
-    if not os.path.isdir(folderPath):
-        os.makedirs(folderPath)
-    filePath = os.path.join(folderPath, fileName)
-    file = open(filePath, 'w')
-    file.write(jsonFile)
-    file.close()
+def save_file(folder_path, file_name, json_file):
+    if not os.path.isdir(folder_path):
+        os.makedirs(folder_path)
+    file_path = os.path.join(folder_path, file_name)
+    with open(file_path, 'w') as file:
+        file.write(json_file)
 
-def save_file_by_channel(channel, id, jsonFile):
-    folderPath = f"./{channel}/{id}/"
-    fileName = "index.json"
-    save_file(folderPath, fileName, jsonFile)
+
+def save_file_by_channel(channel, id, json_file):
+    save_file(job_dir(channel, id), INDEX_FILE, json_file)
 
 
 def extract_audio_to_wav(input_path, workdir):

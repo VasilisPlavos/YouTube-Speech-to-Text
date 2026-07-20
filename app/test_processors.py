@@ -1,5 +1,6 @@
 import unittest
 import os
+import json
 import tempfile
 import processors
 from processors import get_youtube_id, is_supported_media, build_markdown, free_base
@@ -20,6 +21,10 @@ class TestGetYoutubeId(unittest.TestCase):
         
         for url in invalid_urls:
             self.assertEqual(get_youtube_id(url), '')
+
+    def test_non_string_input_returns_empty(self):
+        for value in [123, 3.14, [], {}, object()]:
+            self.assertEqual(get_youtube_id(value), '')
 
     def test_different_types_of_urls(self):
 
@@ -122,6 +127,32 @@ class TestTranscribeLocalFile(unittest.TestCase):
         finally:
             processors.extract_audio_to_wav = orig_extract
             processors.get_text = orig_get_text
+
+
+class TestRunProcessInBackground(unittest.TestCase):
+    def test_unsupported_channel_returns_without_running_pipeline(self):
+        called = {"get_audio": False}
+
+        def boom(*args, **kwargs):
+            called["get_audio"] = True
+            raise AssertionError("get_audio must not run for an unsupported channel")
+
+        original = processors.get_audio
+        processors.get_audio = boom
+        cwd = os.getcwd()
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                os.chdir(d)
+                processors.run_process_in_background("vimeo", "abc123def45")
+                self.assertFalse(called["get_audio"])
+                index_path = os.path.join(d, "vimeo", "abc123def45", "index.json")
+                self.assertTrue(os.path.exists(index_path))
+                with open(index_path) as f:
+                    data = json.load(f)
+                self.assertEqual(data["status"], "vimeo is not supported")
+        finally:
+            os.chdir(cwd)
+            processors.get_audio = original
 
 
 if __name__ == '__main__':
